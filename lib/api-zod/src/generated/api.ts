@@ -23,7 +23,7 @@ export const HealthCheckResponse = zod.object({
 export const GetCurrentAuthUserResponse = zod.object({
   "user": zod.union([zod.object({
   "id": zod.string(),
-  "email": zod.string().email().nullable(),
+  "email": zod.email().nullable(),
   "firstName": zod.string().nullable(),
   "lastName": zod.string().nullable(),
   "profileImageUrl": zod.string().nullable()
@@ -47,7 +47,7 @@ export const BeginBrowserLoginResponse = zod.void()
 export const HandleBrowserLoginCallbackQueryParams = zod.object({
   "code": zod.coerce.string().optional(),
   "state": zod.coerce.string().optional(),
-  "iss": zod.coerce.string().url().optional()
+  "iss": zod.url().optional()
 })
 
 export const HandleBrowserLoginCallbackResponse = zod.void()
@@ -76,7 +76,7 @@ export const LogoutBrowserSessionResponse = zod.void()
 export const ExchangeMobileAuthorizationCodeBody = zod.object({
   "code": zod.string().min(1),
   "code_verifier": zod.string().min(1),
-  "redirect_uri": zod.string().url().min(1),
+  "redirect_uri": zod.url().min(1),
   "state": zod.string().min(1),
   "nonce": zod.string().min(1).optional()
 })
@@ -108,12 +108,12 @@ export const requestUploadUrlBodySizeMax = 52428800;
 
 export const RequestUploadUrlBody = zod.object({
   "name": zod.string().min(1),
-  "size": zod.number().int().min(1).max(requestUploadUrlBodySizeMax),
+  "size": zod.int().min(1).max(requestUploadUrlBodySizeMax),
   "contentType": zod.literal("application/pdf")
 })
 
 export const RequestUploadUrlResponse = zod.object({
-  "uploadURL": zod.string().url(),
+  "uploadURL": zod.url(),
   "objectPath": zod.string()
 })
 
@@ -122,13 +122,13 @@ export const RequestUploadUrlResponse = zod.object({
  * @summary List the current user's study documents
  */
 export const ListDocumentsResponseItem = zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "name": zod.string(),
-  "pageCount": zod.number().int(),
+  "pageCount": zod.int(),
   "status": zod.enum(['parsed', 'failed']),
   "createdAt": zod.coerce.date(),
-  "sectionCount": zod.number().int(),
-  "sentenceCount": zod.number().int()
+  "sectionCount": zod.int(),
+  "sentenceCount": zod.int()
 })
 export const ListDocumentsResponse = zod.array(ListDocumentsResponseItem)
 
@@ -148,26 +148,26 @@ export const ImportDocumentBody = zod.object({
 
 export const ImportDocumentResponse = zod.object({
   "document": zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "name": zod.string(),
-  "pageCount": zod.number().int(),
+  "pageCount": zod.int(),
   "status": zod.enum(['parsed', 'failed']),
   "createdAt": zod.coerce.date(),
-  "sectionCount": zod.number().int(),
-  "sentenceCount": zod.number().int()
+  "sectionCount": zod.int(),
+  "sentenceCount": zod.int()
 }),
   "sections": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "title": zod.string(),
-  "order": zod.number().int(),
-  "sentenceCount": zod.number().int(),
+  "order": zod.int(),
+  "sentenceCount": zod.int(),
   "previewSentences": zod.array(zod.object({
   "text": zod.string(),
   "subheading": zod.string().nullable(),
-  "order": zod.number().int()
+  "order": zod.int()
 })).describe('A short preview of parsed body sentences, excluding headings and footers.'),
-  "generatedCardCount": zod.number().int(),
-  "uncoveredSentenceCount": zod.number().int(),
+  "generatedCardCount": zod.int(),
+  "uncoveredSentenceCount": zod.int(),
   "status": zod.enum(['pending', 'generating', 'done', 'failed']),
   "error": zod.string().nullish()
 }))
@@ -178,31 +178,31 @@ export const ImportDocumentResponse = zod.object({
  * @summary Get a document and its parsed sections
  */
 export const GetDocumentParams = zod.object({
-  "documentId": zod.coerce.string().uuid()
+  "documentId": zod.uuid()
 })
 
 export const GetDocumentResponse = zod.object({
   "document": zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "name": zod.string(),
-  "pageCount": zod.number().int(),
+  "pageCount": zod.int(),
   "status": zod.enum(['parsed', 'failed']),
   "createdAt": zod.coerce.date(),
-  "sectionCount": zod.number().int(),
-  "sentenceCount": zod.number().int()
+  "sectionCount": zod.int(),
+  "sentenceCount": zod.int()
 }),
   "sections": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "title": zod.string(),
-  "order": zod.number().int(),
-  "sentenceCount": zod.number().int(),
+  "order": zod.int(),
+  "sentenceCount": zod.int(),
   "previewSentences": zod.array(zod.object({
   "text": zod.string(),
   "subheading": zod.string().nullable(),
-  "order": zod.number().int()
+  "order": zod.int()
 })).describe('A short preview of parsed body sentences, excluding headings and footers.'),
-  "generatedCardCount": zod.number().int(),
-  "uncoveredSentenceCount": zod.number().int(),
+  "generatedCardCount": zod.int(),
+  "uncoveredSentenceCount": zod.int(),
   "status": zod.enum(['pending', 'generating', 'done', 'failed']),
   "error": zod.string().nullish()
 }))
@@ -213,7 +213,7 @@ export const GetDocumentResponse = zod.object({
  * @summary Delete a document and its study data
  */
 export const DeleteDocumentParams = zod.object({
-  "documentId": zod.coerce.string().uuid()
+  "documentId": zod.uuid()
 })
 
 export const DeleteDocumentResponse = zod.void()
@@ -223,15 +223,15 @@ export const DeleteDocumentResponse = zod.void()
  * @summary Generate cards for all eligible sections
  */
 export const GenerateDocumentSectionsParams = zod.object({
-  "documentId": zod.coerce.string().uuid()
+  "documentId": zod.uuid()
 })
 
 export const GenerateDocumentSectionsResponse = zod.object({
   "sections": zod.array(zod.object({
-  "sectionId": zod.string().uuid(),
+  "sectionId": zod.uuid(),
   "status": zod.enum(['pending', 'generating', 'done', 'failed']),
-  "uncoveredSentenceCount": zod.number().int(),
-  "generatedCardCount": zod.number().int(),
+  "uncoveredSentenceCount": zod.int(),
+  "generatedCardCount": zod.int(),
   "error": zod.string().nullish()
 }))
 })
@@ -241,15 +241,15 @@ export const GenerateDocumentSectionsResponse = zod.object({
  * @summary Generate or retry one section
  */
 export const RetrySectionGenerationParams = zod.object({
-  "documentId": zod.coerce.string().uuid(),
-  "sectionId": zod.coerce.string().uuid()
+  "documentId": zod.uuid(),
+  "sectionId": zod.uuid()
 })
 
 export const RetrySectionGenerationResponse = zod.object({
-  "sectionId": zod.string().uuid(),
+  "sectionId": zod.uuid(),
   "status": zod.enum(['pending', 'generating', 'done', 'failed']),
-  "uncoveredSentenceCount": zod.number().int(),
-  "generatedCardCount": zod.number().int(),
+  "uncoveredSentenceCount": zod.int(),
+  "generatedCardCount": zod.int(),
   "error": zod.string().nullish()
 })
 
@@ -258,15 +258,15 @@ export const RetrySectionGenerationResponse = zod.object({
  * @summary Get the next pending review item
  */
 export const GetReviewQueueQueryParams = zod.object({
-  "documentId": zod.coerce.string().uuid().optional()
+  "documentId": zod.uuid().optional()
 })
 
 export const GetReviewQueueResponse = zod.object({
   "item": zod.union([zod.object({
-  "id": zod.string().uuid(),
-  "documentId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "documentId": zod.uuid(),
   "documentName": zod.string().optional(),
-  "sectionId": zod.string().uuid(),
+  "sectionId": zod.uuid(),
   "section": zod.string(),
   "kind": zod.enum(['flashcard', 'quiz']),
   "front": zod.string(),
@@ -274,13 +274,13 @@ export const GetReviewQueueResponse = zod.object({
   "quizOptions": zod.array(zod.string()),
   "correctAnswer": zod.string().nullable(),
   "sources": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "text": zod.string(),
-  "order": zod.number().int()
+  "order": zod.int()
 }))
 }),zod.null()]),
-  "pendingCount": zod.number().int(),
-  "reviewedCount": zod.number().int()
+  "pendingCount": zod.int(),
+  "reviewedCount": zod.int()
 })
 
 
@@ -288,7 +288,7 @@ export const GetReviewQueueResponse = zod.object({
  * @summary Approve a draft as-is or with edits
  */
 export const ApproveReviewItemParams = zod.object({
-  "itemId": zod.coerce.string().uuid()
+  "itemId": zod.uuid()
 })
 
 
@@ -305,10 +305,10 @@ export const ApproveReviewItemBody = zod.object({
 })
 
 export const ApproveReviewItemResponse = zod.object({
-  "id": zod.string().uuid(),
-  "documentId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "documentId": zod.uuid(),
   "documentName": zod.string(),
-  "sectionId": zod.string().uuid(),
+  "sectionId": zod.uuid(),
   "section": zod.string(),
   "kind": zod.enum(['flashcard', 'quiz']),
   "front": zod.string(),
@@ -322,9 +322,9 @@ export const ApproveReviewItemResponse = zod.object({
   "correctAnswer": zod.string().nullable()
 }),
   "sources": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "text": zod.string(),
-  "order": zod.number().int()
+  "order": zod.int()
 })),
   "reviewOutcome": zod.enum(['approved_as_is', 'edited']),
   "approvedAt": zod.coerce.date()
@@ -335,7 +335,7 @@ export const ApproveReviewItemResponse = zod.object({
  * @summary Discard a draft with an optional reason
  */
 export const DiscardReviewItemParams = zod.object({
-  "itemId": zod.coerce.string().uuid()
+  "itemId": zod.uuid()
 })
 
 export const DiscardReviewItemBody = zod.object({
@@ -343,7 +343,7 @@ export const DiscardReviewItemBody = zod.object({
 })
 
 export const DiscardReviewItemResponse = zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "outcome": zod.enum(['approved_as_is', 'edited', 'discarded']),
   "reason": zod.union([zod.literal('added_outside_info'),zod.literal('dropped_a_condition'),zod.literal('merged_unrelated_sentences'),zod.literal('factually_wrong_per_source'),zod.literal('other'),zod.literal(null)]).nullable(),
   "createdAt": zod.coerce.date()
@@ -354,16 +354,16 @@ export const DiscardReviewItemResponse = zod.object({
  * @summary List approved cards with document and section filters
  */
 export const ListApprovedCardsQueryParams = zod.object({
-  "documentId": zod.coerce.string().uuid().optional(),
-  "sectionId": zod.coerce.string().uuid().optional(),
+  "documentId": zod.uuid().optional(),
+  "sectionId": zod.uuid().optional(),
   "kind": zod.enum(['flashcard', 'quiz']).optional()
 })
 
 export const ListApprovedCardsResponseItem = zod.object({
-  "id": zod.string().uuid(),
-  "documentId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "documentId": zod.uuid(),
   "documentName": zod.string(),
-  "sectionId": zod.string().uuid(),
+  "sectionId": zod.uuid(),
   "section": zod.string(),
   "kind": zod.enum(['flashcard', 'quiz']),
   "front": zod.string(),
@@ -377,9 +377,9 @@ export const ListApprovedCardsResponseItem = zod.object({
   "correctAnswer": zod.string().nullable()
 }),
   "sources": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "text": zod.string(),
-  "order": zod.number().int()
+  "order": zod.int()
 })),
   "reviewOutcome": zod.enum(['approved_as_is', 'edited']),
   "approvedAt": zod.coerce.date()
@@ -391,18 +391,18 @@ export const ListApprovedCardsResponse = zod.array(ListApprovedCardsResponseItem
  * @summary Get review outcomes and edited card comparisons
  */
 export const GetReviewStatsQueryParams = zod.object({
-  "documentId": zod.coerce.string().uuid().optional(),
-  "sectionId": zod.coerce.string().uuid().optional()
+  "documentId": zod.uuid().optional(),
+  "sectionId": zod.uuid().optional()
 })
 
 export const GetReviewStatsResponse = zod.object({
-  "approvedAsIs": zod.number().int(),
-  "edited": zod.number().int(),
-  "discarded": zod.number().int(),
+  "approvedAsIs": zod.int(),
+  "edited": zod.int(),
+  "discarded": zod.int(),
   "comparisons": zod.array(zod.object({
-  "cardId": zod.string().uuid(),
-  "documentId": zod.string().uuid(),
-  "sectionId": zod.string().uuid(),
+  "cardId": zod.uuid(),
+  "documentId": zod.uuid(),
+  "sectionId": zod.uuid(),
   "originalDraft": zod.object({
   "front": zod.string(),
   "answer": zod.string(),
@@ -416,7 +416,7 @@ export const GetReviewStatsResponse = zod.object({
   "correctAnswer": zod.string().nullable()
 })
 })),
-  "reasons": zod.record(zod.string(), zod.number().int())
+  "reasons": zod.record(zod.string(), zod.int())
 })
 
 

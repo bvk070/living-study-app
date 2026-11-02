@@ -7,5 +7,5 @@
  */
 
 export type LogoutBrowserSessionParams = {
-returnTo?: string;
+  returnTo?: string;
 };

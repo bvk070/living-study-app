@@ -7,5 +7,5 @@
  */
 
 export type BeginBrowserLoginParams = {
-returnTo?: string;
+  returnTo?: string;
 };

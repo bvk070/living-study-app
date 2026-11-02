@@ -8,7 +8,7 @@
 import type { CardKind } from './cardKind';
 
 export type ListApprovedCardsParams = {
-documentId?: string;
-sectionId?: string;
-kind?: CardKind;
+  documentId?: string;
+  sectionId?: string;
+  kind?: CardKind;
 };

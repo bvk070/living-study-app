@@ -7,6 +7,6 @@
  */
 
 export type GetReviewStatsParams = {
-documentId?: string;
-sectionId?: string;
+  documentId?: string;
+  sectionId?: string;
 };

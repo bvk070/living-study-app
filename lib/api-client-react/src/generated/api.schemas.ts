@@ -296,31 +296,31 @@ export interface ReviewStats {
 export type AuthorizationSessionHeaderParameter = string;
 
 export type BeginBrowserLoginParams = {
-returnTo?: string;
+  returnTo?: string;
 };
 
 export type HandleBrowserLoginCallbackParams = {
-code?: string;
-state?: string;
-iss?: string;
+  code?: string;
+  state?: string;
+  iss?: string;
 };
 
 export type LogoutBrowserSessionParams = {
-returnTo?: string;
+  returnTo?: string;
 };
 
 export type GetReviewQueueParams = {
-documentId?: string;
+  documentId?: string;
 };
 
 export type ListApprovedCardsParams = {
-documentId?: string;
-sectionId?: string;
-kind?: CardKind;
+  documentId?: string;
+  sectionId?: string;
+  kind?: CardKind;
 };
 
 export type GetReviewStatsParams = {
-documentId?: string;
-sectionId?: string;
+  documentId?: string;
+  sectionId?: string;
 };
 

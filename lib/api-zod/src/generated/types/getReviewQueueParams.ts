@@ -7,5 +7,5 @@
  */
 
 export type GetReviewQueueParams = {
-documentId?: string;
+  documentId?: string;
 };
