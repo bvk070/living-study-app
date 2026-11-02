@@ -28,6 +28,10 @@ async function buildAll() {
     // - uses native modules and loads them dynamically (e.g. sharp)
     // - use path traversal to read files (e.g. @google-cloud/secret-manager loads sibling .proto files)
     external: [
+      // PDF.js resolves its worker relative to its package URL at runtime.
+      // Bundling moves that URL into dist and breaks worker discovery.
+      "pdfjs-dist",
+      "pdfjs-dist/*",
       "*.node",
       "sharp",
       "better-sqlite3",
