@@ -31,8 +31,8 @@ const kindName = (kind: CardKind) => kind === 'quiz' ? 'Quiz' : 'Flashcard';
 const statusName = (status: string) => status === 'done' ? 'Ready' : status === 'failed' ? 'Needs retry' : status === 'generating' ? 'Making cards' : status === 'pending' ? 'Not started' : status;
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'Something went wrong. Please try again.';
 
-function AppShell({ children }: { children: ReactNode }) {
-  const { user, isLoading, isAuthenticated, login, logout } = useAuth();
+function AppShell({ children, auth }: { children: ReactNode; auth: ReturnType<typeof useAuth> }) {
+  const { user, isAuthenticated, login, logout } = auth;
   const [path] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const navItems = [
@@ -61,8 +61,7 @@ function AppShell({ children }: { children: ReactNode }) {
         <p className="m-0 text-[12px] leading-5 text-muted-foreground">Every card is checked against your own notes before it joins your library.</p>
       </div>
       <div className="mt-5 border-t border-sidebar-border pt-4">
-        {isLoading ? <div className="h-10 animate-pulse rounded-xl bg-sidebar-accent"/> :
-          isAuthenticated ? <div className="flex items-center gap-3">
+        {isAuthenticated ? <div className="flex items-center gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/35 text-xs font-semibold text-foreground">{(user?.firstName?.[0] ?? user?.email?.[0] ?? 'S').toUpperCase()}</span>
             <div className="min-w-0 flex-1"><div className="truncate text-[12px] font-medium">{user?.firstName || user?.email || 'Your account'}</div><button className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground" onClick={() => logout()} data-testid="button-sign-out"><LogOut size={12}/> Sign out</button></div>
           </div> :
@@ -422,8 +421,40 @@ function Router() {
 }
 
 function Root() {
+  const auth = useAuth();
   const [path] = useLocation();
-  return <AppShell><Router key={path}/></AppShell>;
+  if (auth.isLoading) {
+    return <div className="flex min-h-[100dvh] items-center justify-center bg-background px-6 text-sm text-muted-foreground">Opening your private study space…</div>;
+  }
+  if (!auth.isAuthenticated) {
+    return <SignInPage onSignIn={auth.login}/>;
+  }
+  return <AppShell auth={auth}><Router key={path}/></AppShell>;
+}
+
+function SignInPage({ onSignIn }: { onSignIn: () => void }) {
+  return <main className="paper-grain flex min-h-[100dvh] items-center justify-center bg-background px-5 py-12 sm:px-8">
+    <section className="w-full max-w-[560px] rounded-[28px] border border-border bg-card p-7 shadow-sm sm:p-10" data-testid="sign-in-screen">
+      <div className="mb-9 flex items-center gap-3">
+        <span className="flex h-11 w-11 items-center justify-center rounded-[15px] bg-primary text-primary-foreground"><BookOpen size={20} strokeWidth={1.8}/></span>
+        <span><span className="serif block text-[23px] leading-[.92]">Living Study</span><span className="serif text-[23px] leading-[.92] italic">Guide</span></span>
+      </div>
+      <div className="mono mb-3 text-[10px] uppercase tracking-[.18em] text-primary">Your notes stay yours</div>
+      <h1 className="serif m-0 max-w-[440px] text-[clamp(36px,8vw,54px)] leading-[1.04]">A quieter way to study what you know.</h1>
+      <p className="mt-4 max-w-[440px] text-[14px] leading-6 text-muted-foreground">Sign in to keep your PDFs private, review every AI-made card against its source, and build a library that belongs to you.</p>
+      <button onClick={onSignIn} className="mt-7 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 sm:w-auto" data-testid="button-sign-in">
+        <LogIn size={16}/> Sign in to continue
+      </button>
+      <div className="mt-8 grid gap-3 border-t border-border pt-5 sm:grid-cols-3">
+        {[["Private PDFs", "Only you can open your notes."], ["Source-linked cards", "Every draft cites its sentences."], ["Your approval", "Nothing joins the library early."]].map(([title, detail]) =>
+          <div key={title} className="rounded-xl bg-muted/50 p-3">
+            <div className="text-[11px] font-semibold">{title}</div>
+            <div className="mt-1 text-[10px] leading-4 text-muted-foreground">{detail}</div>
+          </div>,
+        )}
+      </div>
+    </section>
+  </main>;
 }
 
 function App() {
