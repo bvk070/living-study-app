@@ -10,6 +10,12 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: Auth
+    description: Browser authentication endpoints.
+  - name: Storage
+    description: Private file upload endpoints.
+  - name: StudyGuide
+    description: Documents, generation, review, library, and statistics.
 paths:
   /healthz:
     get:
@@ -24,7 +30,335 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /auth/user:
+    get:
+      tags: [Auth]
+      operationId: getCurrentAuthUser
+      summary: Get the current signed-in user
+      responses:
+        "200":
+          description: Current user or null.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUserEnvelope"
+  /login:
+    get:
+      tags: [Auth]
+      operationId: beginBrowserLogin
+      summary: Start browser sign-in
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "302": { description: Redirect to sign-in provider. }
+  /callback:
+    get:
+      tags: [Auth]
+      operationId: handleBrowserLoginCallback
+      summary: Complete browser sign-in
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema: { type: string }
+        - name: state
+          in: query
+          required: false
+          schema: { type: string }
+        - name: iss
+          in: query
+          required: false
+          schema: { type: string, format: uri }
+      responses:
+        "302": { description: Redirect after sign-in. }
+  /logout:
+    get:
+      tags: [Auth]
+      operationId: logoutBrowserSession
+      summary: Sign out the current user
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "302": { description: End session and redirect. }
+  /mobile-auth/token-exchange:
+    post:
+      tags: [Auth]
+      operationId: exchangeMobileAuthorizationCode
+      summary: Exchange a mobile sign-in code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MobileTokenExchangeRequest" }
+      responses:
+        "200":
+          description: Session token issued.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MobileTokenExchangeSuccess" }
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "401":
+          description: Sign-in token rejected.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+  /mobile-auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logoutMobileSession
+      summary: Delete a mobile session
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationSessionHeader"
+      responses:
+        "200":
+          description: Session removed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LogoutSuccess" }
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a private PDF upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UploadUrlRequest" }
+      responses:
+        "200":
+          description: Presigned upload URL.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UploadUrlResponse" }
+  /documents:
+    get:
+      tags: [StudyGuide]
+      operationId: listDocuments
+      summary: List the current user's study documents
+      responses:
+        "200":
+          description: Documents owned by the current user.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/StudyDocument" }
+  /documents/import:
+    post:
+      tags: [StudyGuide]
+      operationId: importDocument
+      summary: Parse an uploaded PDF into a study document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DocumentImportInput" }
+      responses:
+        "201":
+          description: Parsed document with section previews.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DocumentDetail" }
+  /documents/{documentId}:
+    get:
+      tags: [StudyGuide]
+      operationId: getDocument
+      summary: Get a document and its parsed sections
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+      responses:
+        "200":
+          description: Document with sections.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DocumentDetail" }
+    delete:
+      tags: [StudyGuide]
+      operationId: deleteDocument
+      summary: Delete a document and its study data
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+      responses:
+        "204": { description: Document deleted. }
+  /documents/{documentId}/generate:
+    post:
+      tags: [StudyGuide]
+      operationId: generateDocumentSections
+      summary: Generate cards for all eligible sections
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+      responses:
+        "202":
+          description: Section jobs accepted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GenerationAccepted" }
+  /documents/{documentId}/sections/{sectionId}/generate:
+    post:
+      tags: [StudyGuide]
+      operationId: retrySectionGeneration
+      summary: Generate or retry one section
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+        - $ref: "#/components/parameters/SectionId"
+      responses:
+        "202":
+          description: Section job accepted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SectionGenerationStatus" }
+  /review/queue:
+    get:
+      tags: [StudyGuide]
+      operationId: getReviewQueue
+      summary: Get the next pending review item
+      parameters:
+        - name: documentId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Pending item, source excerpts, and review progress.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewQueueResponse" }
+  /review/items/{itemId}/approve:
+    post:
+      tags: [StudyGuide]
+      operationId: approveReviewItem
+      summary: Approve a draft as-is or with edits
+      parameters:
+        - $ref: "#/components/parameters/ItemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ApproveItemInput" }
+      responses:
+        "200":
+          description: Approved card and original AI draft.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApprovedCard" }
+  /review/items/{itemId}/discard:
+    post:
+      tags: [StudyGuide]
+      operationId: discardReviewItem
+      summary: Discard a draft with an optional reason
+      parameters:
+        - $ref: "#/components/parameters/ItemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DiscardItemInput" }
+      responses:
+        "200":
+          description: Discard recorded without retaining card content.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewDecision" }
+  /library:
+    get:
+      tags: [StudyGuide]
+      operationId: listApprovedCards
+      summary: List approved cards with document and section filters
+      parameters:
+        - name: documentId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: sectionId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: kind
+          in: query
+          required: false
+          schema: { $ref: "#/components/schemas/CardKind" }
+      responses:
+        "200":
+          description: Approved cards belonging to the current user.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ApprovedCard" }
+  /stats:
+    get:
+      tags: [StudyGuide]
+      operationId: getReviewStats
+      summary: Get review outcomes and edited card comparisons
+      parameters:
+        - name: documentId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: sectionId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Per-document and per-section review statistics.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewStats" }
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serve an owned private PDF
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Private object stream.
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
 components:
+  parameters:
+    AuthorizationSessionHeader:
+      name: Authorization
+      in: header
+      required: false
+      schema: { type: string }
+    SessionCookie:
+      name: sid
+      in: cookie
+      required: false
+      schema: { type: string }
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SectionId:
+      name: sectionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +367,253 @@ components:
           type: string
       required:
         - status
+    AuthUser:
+      type: object
+      required: [id, email, firstName, lastName, profileImageUrl]
+      properties:
+        id: { type: string }
+        email: { type: [string, "null"], format: email }
+        firstName: { type: [string, "null"] }
+        lastName: { type: [string, "null"] }
+        profileImageUrl: { type: [string, "null"] }
+    AuthUserEnvelope:
+      type: object
+      required: [user]
+      properties:
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/AuthUser"
+            - type: "null"
+    MobileTokenExchangeRequest:
+      type: object
+      required: [code, code_verifier, redirect_uri, state]
+      properties:
+        code: { type: string, minLength: 1 }
+        code_verifier: { type: string, minLength: 1 }
+        redirect_uri: { type: string, minLength: 1, format: uri }
+        state: { type: string, minLength: 1 }
+        nonce: { type: string, minLength: 1 }
+    MobileTokenExchangeSuccess:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string }
+    LogoutSuccess:
+      type: object
+      required: [success]
+      properties:
+        success: { type: boolean, const: true }
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name: { type: string, minLength: 1 }
+        size: { type: integer, minimum: 1, maximum: 52428800 }
+        contentType: { type: string, const: application/pdf }
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL: { type: string, format: uri }
+        objectPath: { type: string }
+    DocumentImportInput:
+      type: object
+      required: [name, objectPath]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 255 }
+        objectPath: { type: string, minLength: 1 }
+    StudyDocument:
+      type: object
+      required: [id, name, pageCount, status, createdAt, sectionCount, sentenceCount]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        pageCount: { type: integer }
+        status: { type: string, enum: [parsed, failed] }
+        createdAt: { type: string, format: date-time }
+        sectionCount: { type: integer }
+        sentenceCount: { type: integer }
+    StudySection:
+      type: object
+      required: [id, title, order, sentenceCount, previewSentences, generatedCardCount, uncoveredSentenceCount, status]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        order: { type: integer }
+        sentenceCount: { type: integer }
+        previewSentences:
+          type: array
+          description: A short preview of parsed body sentences, excluding headings and footers.
+          items: { $ref: "#/components/schemas/SentencePreview" }
+        generatedCardCount: { type: integer }
+        uncoveredSentenceCount: { type: integer }
+        status: { $ref: "#/components/schemas/GenerationState" }
+        error: { type: [string, "null"] }
+    SentencePreview:
+      type: object
+      required: [text, subheading, order]
+      properties:
+        text: { type: string }
+        subheading: { type: [string, "null"] }
+        order: { type: integer }
+    DocumentDetail:
+      type: object
+      required: [document, sections]
+      properties:
+        document: { $ref: "#/components/schemas/StudyDocument" }
+        sections:
+          type: array
+          items: { $ref: "#/components/schemas/StudySection" }
+    GenerationState:
+      type: string
+      enum: [pending, generating, done, failed]
+    SectionGenerationStatus:
+      type: object
+      required: [sectionId, status, uncoveredSentenceCount, generatedCardCount]
+      properties:
+        sectionId: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/GenerationState" }
+        uncoveredSentenceCount: { type: integer }
+        generatedCardCount: { type: integer }
+        error: { type: [string, "null"] }
+    GenerationAccepted:
+      type: object
+      required: [sections]
+      properties:
+        sections:
+          type: array
+          items: { $ref: "#/components/schemas/SectionGenerationStatus" }
+    CardKind:
+      type: string
+      enum: [flashcard, quiz]
+    QuizOption:
+      type: object
+      required: [text, isCorrect]
+      properties:
+        text: { type: string }
+        isCorrect: { type: boolean }
+    PendingReviewItem:
+      type: object
+      required: [id, documentId, sectionId, section, kind, front, answer, quizOptions, correctAnswer, sources]
+      properties:
+        id: { type: string, format: uuid }
+        documentId: { type: string, format: uuid }
+        documentName: { type: string }
+        sectionId: { type: string, format: uuid }
+        section: { type: string }
+        kind: { $ref: "#/components/schemas/CardKind" }
+        front: { type: string }
+        answer: { type: string }
+        quizOptions:
+          type: array
+          items: { type: string }
+        correctAnswer: { type: [string, "null"] }
+        sources:
+          type: array
+          items: { $ref: "#/components/schemas/SourceSentence" }
+    SourceSentence:
+      type: object
+      required: [id, text, order]
+      properties:
+        id: { type: string, format: uuid }
+        text: { type: string }
+        order: { type: integer }
+    ReviewQueueResponse:
+      type: object
+      required: [item, pendingCount, reviewedCount]
+      properties:
+        item:
+          oneOf:
+            - $ref: "#/components/schemas/PendingReviewItem"
+            - type: "null"
+        pendingCount: { type: integer }
+        reviewedCount: { type: integer }
+    ApproveItemInput:
+      type: object
+      required: [front, answer, quizOptions, correctAnswer]
+      properties:
+        front: { type: string, minLength: 1 }
+        answer: { type: string, minLength: 1 }
+        quizOptions:
+          type: array
+          items: { type: string }
+          maxItems: 4
+        correctAnswer: { type: [string, "null"] }
+    ApprovedCard:
+      type: object
+      required: [id, documentId, documentName, sectionId, section, kind, front, answer, quizOptions, correctAnswer, originalDraft, sources, reviewOutcome, approvedAt]
+      properties:
+        id: { type: string, format: uuid }
+        documentId: { type: string, format: uuid }
+        documentName: { type: string }
+        sectionId: { type: string, format: uuid }
+        section: { type: string }
+        kind: { $ref: "#/components/schemas/CardKind" }
+        front: { type: string }
+        answer: { type: string }
+        quizOptions:
+          type: array
+          items: { type: string }
+        correctAnswer: { type: [string, "null"] }
+        originalDraft: { $ref: "#/components/schemas/DraftSnapshot" }
+        sources:
+          type: array
+          items: { $ref: "#/components/schemas/SourceSentence" }
+        reviewOutcome: { type: string, enum: [approved_as_is, edited] }
+        approvedAt: { type: string, format: date-time }
+    DraftSnapshot:
+      type: object
+      required: [front, answer, quizOptions, correctAnswer]
+      properties:
+        front: { type: string }
+        answer: { type: string }
+        quizOptions:
+          type: array
+          items: { type: string }
+        correctAnswer: { type: [string, "null"] }
+    DiscardItemInput:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          oneOf:
+            - type: string
+              enum: [added_outside_info, dropped_a_condition, merged_unrelated_sentences, factually_wrong_per_source, other]
+            - type: "null"
+    ReviewDecision:
+      type: object
+      required: [id, outcome, reason, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        outcome: { type: string, enum: [approved_as_is, edited, discarded] }
+        reason:
+          type: [string, "null"]
+          enum: [added_outside_info, dropped_a_condition, merged_unrelated_sentences, factually_wrong_per_source, other, null]
+        createdAt: { type: string, format: date-time }
+    ReviewStats:
+      type: object
+      required: [approvedAsIs, edited, discarded, comparisons, reasons]
+      properties:
+        approvedAsIs: { type: integer }
+        edited: { type: integer }
+        discarded: { type: integer }
+        comparisons:
+          type: array
+          items:
+            type: object
+            required: [cardId, documentId, sectionId, originalDraft, finalCard]
+            properties:
+              cardId: { type: string, format: uuid }
+              documentId: { type: string, format: uuid }
+              sectionId: { type: string, format: uuid }
+              originalDraft: { $ref: "#/components/schemas/DraftSnapshot" }
+              finalCard: { $ref: "#/components/schemas/DraftSnapshot" }
+        reasons:
+          type: object
+          additionalProperties: { type: integer }
 

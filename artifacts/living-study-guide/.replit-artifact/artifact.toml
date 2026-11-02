@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Living Study Guide"
+description = "A responsive study app that turns uploaded PDFs into cited flashcards and quizzes, with per-section generation, human review, an approved-card library, and review analytics."
+version = "1.0.0"
+id = "artifacts/living-study-guide"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23877
+
+[services.development]
+run = "pnpm --filter @workspace/living-study-guide run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/living-study-guide", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/living-study-guide/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23877"
+BASE_PATH = "/"
