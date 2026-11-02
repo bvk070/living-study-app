@@ -52,14 +52,20 @@ function setOidcCookie(res: Response, name: string, value: string) {
 }
 
 function getSafeReturnTo(value: unknown): string {
-  if (
-    typeof value !== 'string' ||
-    !value.startsWith('/') ||
-    value.startsWith('//')
-  ) {
+  if (typeof value !== 'string' || !value.startsWith('/')) {
     return '/';
   }
-  return value;
+
+  try {
+    const baseOrigin = 'https://return-to.invalid';
+    const target = new URL(value, baseOrigin);
+    if (target.origin !== baseOrigin) {
+      return '/';
+    }
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch {
+    return '/';
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
